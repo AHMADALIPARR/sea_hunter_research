@@ -1,3 +1,7 @@
+% SPDX-License-Identifier: AGPL-3.0-only
+% Uncertified — research prototype, not for operational use.
+% Copyright (C) 2026 AHMAD ALI PARR / SnapKitty Research Lab
+
 function varargout = alphazero_transformer_recreation(command, varargin)
 % ALPHAZERO_TRANSFORMER_RECREATION
 % Clean-room MATLAB reference core for an AlphaZero-style Go agent using a
