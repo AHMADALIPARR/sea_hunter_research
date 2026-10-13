@@ -106,27 +106,15 @@ data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
 ### Maritime Pipeline
 
 ```mermaid
-flowchart TB
-    subgraph Control
-        state[Vessel State]
-        guidance[Waypoint Guidance]
-        gate{Safety Gate}
-        update[Kinematic Update]
-        hold[Hold]
-    end
-    subgraph Perception
-        sensor[Sensor Observation]
-        track[Kalman Track]
-        cpa[CPA / TCPA]
-    end
-    state --> guidance
-    guidance --> gate
-    gate -->|Accept| update
-    gate -->|Reject| hold
-    update --> sensor
-    sensor --> track
-    track --> cpa
-    update --> state
+graph TD
+    A[Vessel State] --> B[Waypoint Guidance]
+    B --> C{Safety Gate}
+    C -->|Accept| D[Kinematic Update]
+    C -->|Reject| E[Hold]
+    D --> F[Sensor Observation]
+    F --> G[Kalman Track]
+    G --> H[CPA TCPA]
+    D --> A
 ```
 
 | Phase | Capability | Binary |
@@ -139,28 +127,16 @@ Details → [`docs/PHASES.md`](docs/PHASES.md)
 ### Go Pipeline
 
 ```mermaid
-flowchart TB
-    subgraph Training Loop
-        init[netInit]
-        selfplay[selfplay]
-        targets[visit policy + outcome]
-        train[netTrain]
-    end
-    subgraph Search
-        mcts[MCTS]
-        forward[features + netForward]
-        puct[PUCT selection]
-        apply[applyAction]
-    end
-    init --> selfplay
-    selfplay --> mcts
-    mcts --> forward
-    mcts --> puct
-    puct --> apply
-    apply --> mcts
-    selfplay --> targets
-    targets --> train
-    train --> init
+graph TD
+    A[netInit] --> B[selfplay]
+    B --> C[MCTS]
+    C --> D[features]
+    C --> E[PUCT]
+    E --> F[applyAction]
+    F --> C
+    B --> G[policy and outcome]
+    G --> H[netTrain]
+    H --> A
 ```
 
 PUCT selection with network priors and root Dirichlet noise. Value backups flip sign with the player to move. Training loss is cross-entropy on the visit-count policy plus mean-squared error on the outcome.
