@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <queue>
 #include <unordered_set>
+#include <functional>
 
 namespace az {
 
@@ -14,6 +15,16 @@ GoBoard::GoBoard(int size, float komi)
     if (size < 2 || size > kMaxSize)
         throw std::invalid_argument("invalid board size");
     stones_.fill(0);
+    history_.insert(board_hash());
+}
+
+uint64_t GoBoard::board_hash() const {
+    uint64_t h = 14695981039346656037ULL;
+    for (int i = 0; i < n_; ++i) {
+        h ^= static_cast<uint64_t>(stones_[i] + 1);
+        h *= 1099511628211ULL;
+    }
+    return h;
 }
 
 std::vector<int> GoBoard::neighbors(int idx) const {
@@ -57,12 +68,6 @@ std::pair<std::vector<int>, int> GoBoard::group_of(int idx) const {
     return {grp, libs};
 }
 
-bool GoBoard::would_be_suicide(int idx) const {
-    // Temporary place to test
-    // (simplified: check after hypothetical place + captures)
-    return false; // full check done in play path
-}
-
 void GoBoard::place_and_capture(int idx) {
     int8_t me = static_cast<int8_t>(to_play_);
     int8_t opp = static_cast<int8_t>(opponent(to_play_));
@@ -81,7 +86,6 @@ void GoBoard::place_and_capture(int idx) {
         }
     }
 
-    // Simple ko
     ko_.reset();
     if (captured == 1) {
         auto [own, own_libs] = group_of(idx);
@@ -91,10 +95,15 @@ void GoBoard::place_and_capture(int idx) {
 }
 
 MoveResult GoBoard::play(int action) {
+    if (dead_removal_phase_)
+        return {false, 0, "dead removal phase"};
+
     if (action == n_) { // pass
         ++passes_;
         ko_.reset();
         to_play_ = opponent(to_play_);
+        if (passes_ >= 2)
+            dead_removal_phase_ = true;
         return {true, 0, ""};
     }
     if (action < 0 || action >= n_)
@@ -104,10 +113,10 @@ MoveResult GoBoard::play(int action) {
     if (ko_ && *ko_ == action)
         return {false, 0, "ko"};
 
-    // Suicide check: place temporarily, capture, then see own libs
+    // Simulate for suicide + superko
+    auto saved = stones_;
     int8_t me = static_cast<int8_t>(to_play_);
     int8_t opp = static_cast<int8_t>(opponent(to_play_));
-    auto saved = stones_;
     stones_[action] = me;
     int cap = 0;
     for (int nb : neighbors(action)) {
@@ -121,32 +130,47 @@ MoveResult GoBoard::play(int action) {
     }
     auto [own, own_libs] = group_of(action);
     bool suicide = (cap == 0 && own_libs == 0);
+    uint64_t h = board_hash();
     stones_ = saved;
+
     if (suicide)
         return {false, 0, "suicide"};
+    if (history_.count(h))
+        return {false, 0, "superko"};
 
     place_and_capture(action);
+    history_.insert(board_hash());
     passes_ = 0;
+    dead_removal_phase_ = false;
     to_play_ = opponent(to_play_);
     return {true, 0, ""};
 }
 
 std::vector<int> GoBoard::legal_moves() const {
+    if (dead_removal_phase_) return {};
     std::vector<int> moves;
     for (int a = 0; a < n_; ++a) {
         if (stones_[a] != 0) continue;
         if (ko_ && *ko_ == a) continue;
-        // Quick suicide proxy (full check would clone; accept for now if empty neighbor or capture)
-        bool has_empty = false;
-        bool can_cap = false;
+
+        auto saved = stones_;
+        // const_cast for temporary simulation (legal_moves is const)
+        auto* self = const_cast<GoBoard*>(this);
+        self->stones_[a] = static_cast<int8_t>(to_play_);
+        int8_t opp = static_cast<int8_t>(opponent(to_play_));
         for (int nb : neighbors(a)) {
-            if (stones_[nb] == 0) has_empty = true;
-            if (stones_[nb] == static_cast<int8_t>(opponent(to_play_))) {
-                auto [grp, libs] = group_of(nb);
-                if (libs == 1) can_cap = true;
+            if (self->stones_[nb] == opp) {
+                auto [grp, libs] = self->group_of(nb);
+                if (libs == 0)
+                    for (int g : grp) self->stones_[g] = 0;
             }
         }
-        if (has_empty || can_cap)
+        auto [own, own_libs] = self->group_of(a);
+        bool suicide = (own_libs == 0);
+        uint64_t h = self->board_hash();
+        self->stones_ = saved;
+
+        if (!suicide && !history_.count(h))
             moves.push_back(a);
     }
     moves.push_back(n_); // pass always legal
@@ -154,18 +178,27 @@ std::vector<int> GoBoard::legal_moves() const {
 }
 
 bool GoBoard::is_terminal() const {
-    return passes_ >= 2;
+    return passes_ >= 2 && !dead_removal_phase_;
+}
+
+void GoBoard::remove_dead(const std::vector<int>& dead_indices) {
+    if (!dead_removal_phase_) return;
+    for (int idx : dead_indices) {
+        if (idx >= 0 && idx < n_ && stones_[idx] != 0)
+            stones_[idx] = 0;
+    }
+    dead_removal_phase_ = false;
+    history_.insert(board_hash());
 }
 
 float GoBoard::outcome() const {
-    // Area scoring (Tromp-Taylor style)
+    // Area scoring (Tromp-Taylor / Chinese style)
     std::vector<bool> seen(n_, false);
     float black = 0.f, white = 0.f;
     for (int i = 0; i < n_; ++i) {
         if (seen[i]) continue;
         if (stones_[i] == 1) { black += 1.f; seen[i] = true; continue; }
         if (stones_[i] == -1) { white += 1.f; seen[i] = true; continue; }
-        // Empty region
         std::vector<int> region;
         std::queue<int> q;
         q.push(i);
