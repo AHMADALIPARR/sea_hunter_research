@@ -173,6 +173,10 @@ Further detail is given in [`docs/PHASES.md`](docs/PHASES.md).
 
 The Go engine implements an AlphaZero-style agent. Rules, search, and training are separated.
 
+<p align="center">
+  <img src="docs/images/go_engine.png" alt="Go engine architecture" width="720"/>
+</p>
+
 **Rules.** Area (Tromp-Taylor) scoring, positional superko via board-hash history, suicide ban, and an optional post-pass dead-stone removal phase. Implemented in MATLAB (`+go/Board`) and C++ (`GoBoard`).
 
 **Search.** MCTS with PUCT selection. At each leaf the network returns a policy prior and a value. Root Dirichlet noise is mixed into the prior during self-play. Value backups alternate sign with the player to move. The final visit-count distribution is the policy target.
