@@ -8,6 +8,7 @@
 #include <optional>
 #include <vector>
 #include <string>
+#include <unordered_set>
 
 namespace az {
 
@@ -43,6 +44,10 @@ public:
     MoveResult play(int action);    // 0..n-1 place, n = pass
     std::vector<int> legal_moves() const;
 
+    // Post-pass dead-stone removal (Chinese-style optional phase)
+    void remove_dead(const std::vector<int>& dead_indices);
+    bool in_dead_removal_phase() const { return dead_removal_phase_; }
+
 private:
     int size_;
     int n_;
@@ -50,11 +55,13 @@ private:
     Player to_play_ = Player::Black;
     std::optional<int> ko_;
     int passes_ = 0;
+    bool dead_removal_phase_ = false;
     std::array<int8_t, kMaxSize * kMaxSize> stones_{};
+    std::unordered_set<uint64_t> history_;  // positional superko
 
     std::vector<int> neighbors(int idx) const;
     std::pair<std::vector<int>, int> group_of(int idx) const;
-    bool would_be_suicide(int idx) const;
+    uint64_t board_hash() const;
     void place_and_capture(int idx);
 };
 
