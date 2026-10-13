@@ -25,9 +25,9 @@ Clean-room research platform with two independent components:
 
 ## Research Context
 
-**Sea Hunter** is an unmanned surface vehicle developed under DARPA’s Anti-Submarine Warfare Continuous Trail Unmanned Vessel (ACTUV) program. The 132-foot (40 m) trimaran was designed and built by Leidos, christened in Portland, Oregon in April 2016, and later transitioned to the Office of Naval Research.<grok type="render_inline_citation" citation_id="71" />
+**Sea Hunter** is an unmanned surface vehicle developed under DARPA’s Anti-Submarine Warfare Continuous Trail Unmanned Vessel (ACTUV) program. The 132-foot (40 m) trimaran was designed and built by Leidos, christened in Portland, Oregon in April 2016, and later transitioned to the Office of Naval Research.
 
-Public program goals included long-endurance autonomous operation (on the order of 60–90 days), sparse supervisory control rather than remote piloting, and compliance with the International Regulations for Preventing Collisions at Sea (COLREGs). The platform was sized for independent deployment and intended primarily for continuous trail of diesel-electric submarines, with modular payloads for other roles.<grok type="render_inline_citation" citation_id="73" />
+Public program goals included long-endurance autonomous operation (on the order of 60–90 days), sparse supervisory control rather than remote piloting, and compliance with the International Regulations for Preventing Collisions at Sea (COLREGs). The platform was sized for independent deployment and intended primarily for continuous trail of diesel-electric submarines, with modular payloads for other roles.
 
 This repository is a clean-room research scaffold inspired by publicly described maritime-autonomy challenges (independent safety gating, sensor observation, tracking, and encounter geometry). It does not contain, reverse-engineer, or claim to reproduce any Sea Hunter software, weights, or proprietary design data.
 
@@ -107,14 +107,14 @@ data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
 
 ```mermaid
 flowchart LR
-    A([Vessel State]) --> B[Waypoint Guidance]
-    B --> C{Safety Gate}
-    C -->|Accept| D[Kinematic Update]
-    C -->|Reject| E[Hold]
-    D --> F[Sensor Observation]
-    F --> G[Kalman Track]
-    G --> H([CPA / TCPA])
-    D -.-> A
+    state[Vessel State] --> guidance[Waypoint Guidance]
+    guidance --> gate{Safety Gate}
+    gate -->|Accept| update[Kinematic Update]
+    gate -->|Reject| hold[Hold]
+    update --> sensor[Sensor Observation]
+    sensor --> track[Kalman Track]
+    track --> cpa[CPA / TCPA]
+    update --> state
 ```
 
 | Phase | Capability | Binary |
@@ -128,15 +128,15 @@ Details → [`docs/PHASES.md`](docs/PHASES.md)
 
 ```mermaid
 flowchart LR
-    A([netInit]) --> B[selfplay]
-    B --> C[MCTS]
-    C --> D[features + forward]
-    C --> E[PUCT]
-    E --> F[applyAction]
-    F --> C
-    B --> G[policy + outcome]
-    G --> H([netTrain])
-    H -.-> A
+    init[netInit] --> selfplay[selfplay]
+    selfplay --> mcts[MCTS]
+    mcts --> forward[features + forward]
+    mcts --> puct[PUCT]
+    puct --> apply[applyAction]
+    apply --> mcts
+    selfplay --> targets[policy + outcome]
+    targets --> train[netTrain]
+    train --> init
 ```
 
 PUCT selection with network priors and root Dirichlet noise. Value backups flip sign with the player to move. Training loss is cross-entropy on the visit-count policy plus mean-squared error on the outcome.
