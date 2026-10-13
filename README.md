@@ -28,6 +28,16 @@ The core loop: vessel state → waypoint guidance → independent safety gate �
 
 </details>
 
+## Phases
+
+See [`docs/PHASES.md`](docs/PHASES.md) for the full roadmap.
+
+- **Phase 1** — kinematic vessel, waypoint guidance, independent safety gate (`src/sim_nav_safety.cpp`)
+- **Phase 2** — noisy polar sensor model (`src/sensor_models.hpp`)
+- **Phase 3** — constant-velocity Kalman track (`src/kalman_track.hpp`)
+- **Phase 4** — COLREGs-inspired encounter fixtures + CPA/TCPA (`src/colregs_scenarios.hpp`)
+- **Phase 5+** — not started (hydrodynamics, full rule engine, multi-target association, learned models, formal verification)
+
 ## Phase 1 Deliverables
 
 - [`docs/SOURCE_PROVENANCE.md`](docs/SOURCE_PROVENANCE.md) — source inventory, licenses, and evidence boundaries.
@@ -56,9 +66,10 @@ Requires a C++17 compiler and CMake 3.16+.
 cmake -S . -B build
 cmake --build build
 ./build/sim_nav_safety
+./build/phase_demo
 ```
 
-The demo simulates a point-vessel in a flat local XY frame. It proposes bounded heading/speed commands toward a waypoint, then passes them through an independent safety gate that rejects commands when the vessel is too close to a static hazard or inputs are invalid. This is a deliberately small baseline, not COLREGs-compliant navigation.
+The Phase 1 demo simulates a point-vessel in a flat local XY frame. It proposes bounded heading/speed commands toward a waypoint, then passes them through an independent safety gate that rejects commands when the vessel is too close to a static hazard or inputs are invalid. This is a deliberately small baseline, not COLREGs-compliant navigation.
 
 Sample output is in [`run_sample.txt`](run_sample.txt).
 
@@ -68,6 +79,6 @@ Sample output is in [`run_sample.txt`](run_sample.txt).
 
 All source files carry `SPDX-License-Identifier: AGPL-3.0-only` and an uncertified research-prototype notice. No MIT or other licenses are present.
 
-## Non-goals in this phase
+## Non-goals
 
-No Sea Hunter source recovery, no neural network weights, no learned model, no operational maritime deployment, no real-world control connection, and no claim of formal verification. Further phases should add tested sensor models, uncertainty-aware tracking, civilian COLREGs scenarios, and language-specific ports.
+No Sea Hunter source recovery, no neural network weights, no learned model, no operational maritime deployment, no real-world control connection, and no claim of formal verification. Phase 5+ items remain future work.
