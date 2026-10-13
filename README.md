@@ -16,12 +16,14 @@
 
 ---
 
-Clean-room research platform with two independent components:
+## What this is
 
-| Component | Focus |
-|-----------|-------|
-| **Maritime simulation** | Kinematic vessel, safety gate, sensors, tracking, COLREGs fixtures |
-| **Go engine** | Rules, MLP policy-value network, MCTS, self-play training |
+This repository is a clean-room research platform for two separate problems:
+
+1. **Maritime autonomy simulation** — a progressive scaffold that starts with a simple kinematic vessel and safety gate, then adds noisy sensors, tracking, and encounter analysis. The animation above shows the basic guidance idea: a vessel following a path toward a waypoint under an independent safety check.
+2. **AlphaZero-style Go** — a complete rules engine, a small MLP policy-value network, Monte Carlo Tree Search, and a self-play training loop. Implemented in both MATLAB and C++.
+
+The two threads share no code. They are collected here because both involve sequential decision-making under constraints (safety rules at sea; legal moves on a board).
 
 ## Research Context
 
@@ -29,18 +31,15 @@ Clean-room research platform with two independent components:
 
 Public program goals included long-endurance autonomous operation (on the order of 60–90 days), sparse supervisory control rather than remote piloting, and compliance with the International Regulations for Preventing Collisions at Sea (COLREGs). The platform was sized for independent deployment and intended primarily for continuous trail of diesel-electric submarines, with modular payloads for other roles.
 
-This repository is a clean-room research scaffold inspired by publicly described maritime-autonomy challenges (independent safety gating, sensor observation, tracking, and encounter geometry). It does not contain, reverse-engineer, or claim to reproduce any Sea Hunter software, weights, or proprietary design data.
+This repository is inspired by publicly described challenges in maritime autonomy (independent safety gating, sensor observation, tracking, encounter geometry). It does not contain, reverse-engineer, or claim to reproduce any Sea Hunter software, weights, or proprietary design data.
 
 ## Table of Contents
 
+- [What this is](#what-this-is)
+- [Research Context](#research-context)
 - [Installation](#installation)
 - [Usage](#usage)
-  - [Maritime Simulation](#maritime-simulation)
-  - [Go Engine (C++)](#go-engine-c)
-  - [Go Engine (MATLAB)](#go-engine-matlab)
 - [Architecture](#architecture)
-  - [Maritime Pipeline](#maritime-pipeline)
-  - [Go Pipeline](#go-pipeline)
 - [Project Structure](#project-structure)
 - [License](#license)
 
@@ -60,6 +59,8 @@ This repository is a clean-room research scaffold inspired by publicly described
 
 ### Maritime Simulation
 
+The maritime code builds two binaries from the repository root:
+
 ```bash
 cmake -S . -B build
 cmake --build build
@@ -68,6 +69,8 @@ cmake --build build
 ./build/phase_demo        # Phases 2–4 — sensing, tracking, encounters
 ```
 
+`sim_nav_safety` runs a short closed-loop demonstration of waypoint guidance with an independent safety check. `phase_demo` loads a standard encounter, generates noisy polar observations, updates a Kalman track, and reports CPA/TCPA.
+
 ### Go Engine (C++)
 
 ```bash
@@ -75,13 +78,15 @@ cd cpp
 cmake -S . -B build
 cmake --build build
 
-./build/az_selfplay 5 50 3   # size, sims, games
+./build/az_selfplay 5 50 3   # board size, simulations, games
 ./build/az_test
 ```
 
-> The Go subtree is included by default when building from the repository root.
+The C++ self-play binary uses a random evaluator (no trained network). It is useful for exercising the rules engine and search. The Go subtree is also built by default from the repository root.
 
 ### Go Engine (MATLAB)
+
+The MATLAB path implements the full trainable loop: feature extraction, MLP forward pass, MCTS with network priors, self-play, and manual backprop training.
 
 ```matlab
 cfg.N = 5;  cfg.hist = 4;  cfg.sims = 50;  cfg.cpuct = 1.5;
@@ -105,6 +110,8 @@ data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
 
 ### Maritime Pipeline
 
+Guidance and the safety gate are kept separate. A proposed command is checked before it is applied to the kinematic model. Later phases add a noisy polar sensor, a constant-velocity Kalman filter, and encounter geometry (CPA/TCPA).
+
 ```mermaid
 graph TD
     A[Vessel State] --> B[Waypoint Guidance]
@@ -126,6 +133,8 @@ Details → [`docs/PHASES.md`](docs/PHASES.md)
 
 ### Go Pipeline
 
+Self-play generates positions by searching with MCTS. The network provides priors and a value estimate at each leaf. The resulting visit-count policy and game outcome become training targets. The loss is cross-entropy on the policy plus mean-squared error on the value.
+
 ```mermaid
 graph TD
     A[netInit] --> B[selfplay]
@@ -139,7 +148,7 @@ graph TD
     H --> A
 ```
 
-PUCT selection with network priors and root Dirichlet noise. Value backups flip sign with the player to move. Training loss is cross-entropy on the visit-count policy plus mean-squared error on the outcome.
+PUCT selection uses network priors and root Dirichlet noise. Value backups flip sign with the player to move.
 
 | Module | Path |
 |:-------|:-----|
@@ -150,18 +159,18 @@ PUCT selection with network priors and root Dirichlet noise. Value backups flip 
 | Self-play | `matlab/+az/selfplay.m` |
 | C++ | `cpp/` |
 
-Network diagram → [`docs/network_tree.xml`](docs/network_tree.xml)
+Network structure → [`docs/network_tree.xml`](docs/network_tree.xml)
 
 ---
 
 ## Project Structure
 
 ```text
-src/                 Maritime simulation
-docs/                Design notes and diagrams
-matlab/+go/          Go rules
-matlab/+az/          Features, network, search, training
-cpp/                 C++ Go engine
+src/                 Maritime simulation sources
+docs/                Design notes, phases, network diagram
+matlab/+go/          Go rules engine
+matlab/+az/          Features, MLP, MCTS, self-play, training
+cpp/                 C++ GoBoard, MCTS, self-play
 ```
 
 ---
