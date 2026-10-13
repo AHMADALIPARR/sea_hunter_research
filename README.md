@@ -10,6 +10,10 @@
   <strong>Maritime autonomy simulation</strong> · <strong>AlphaZero-style Go engine</strong>
 </p>
 
+<p align="center">
+  <img src="docs/images/guidance_demo.gif" alt="Guidance demo" width="640"/>
+</p>
+
 ---
 
 Clean-room research platform with two independent components:
