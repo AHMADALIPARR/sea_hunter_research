@@ -1,17 +1,23 @@
 # Sea Hunter Research
 
-[![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](LICENSE)
-[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)]()
-[![MATLAB](https://img.shields.io/badge/MATLAB-R2023b+-orange.svg)]()
+<p align="center">
+  <img src="https://img.shields.io/badge/License-AGPL--3.0--only-blue?style=for-the-badge" alt="License"/>
+  <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white" alt="C++"/>
+  <img src="https://img.shields.io/badge/MATLAB-R2023b+-orange?style=for-the-badge&logo=mathworks&logoColor=white" alt="MATLAB"/>
+</p>
 
-Research platform for maritime autonomy simulation and AlphaZero-style game-tree search.
+<p align="center">
+  <strong>Maritime autonomy simulation</strong> · <strong>AlphaZero-style Go engine</strong>
+</p>
 
-The repository contains two independent components:
+---
 
-- **Maritime simulation** — kinematic vessel model, independent safety gate, sensor observation model, constant-velocity tracking, and COLREGs-inspired encounter fixtures.
-- **Go engine** — rules implementation (area scoring, positional superko), MLP policy-value network, Monte Carlo Tree Search, and self-play training pipeline.
+Clean-room research platform with two independent components:
 
-Both components are clean-room implementations. No proprietary source material is used.
+| Component | Focus |
+|-----------|-------|
+| **Maritime simulation** | Kinematic vessel, safety gate, sensors, tracking, COLREGs fixtures |
+| **Go engine** | Rules, MLP policy-value network, MCTS, self-play training |
 
 ## Table of Contents
 
@@ -30,10 +36,8 @@ Both components are clean-room implementations. No proprietary source material i
 
 ## Installation
 
-**Requirements**
-
-| Component | Version |
-|-----------|---------|
+| Tool | Version |
+|------|---------|
 | C++ compiler | C++17 |
 | CMake | 3.16+ |
 | MATLAB | R2023b+ (Go pipeline only) |
@@ -48,11 +52,8 @@ Both components are clean-room implementations. No proprietary source material i
 cmake -S . -B build
 cmake --build build
 
-# Phase 1: guidance and safety gate
-./build/sim_nav_safety
-
-# Phases 2–4: sensing, tracking, encounter analysis
-./build/phase_demo
+./build/sim_nav_safety    # Phase 1 — guidance + safety gate
+./build/phase_demo        # Phases 2–4 — sensing, tracking, encounters
 ```
 
 ### Go Engine (C++)
@@ -62,28 +63,19 @@ cd cpp
 cmake -S . -B build
 cmake --build build
 
-# board size, simulations, games
-./build/az_selfplay 5 50 3
-
+./build/az_selfplay 5 50 3   # size, sims, games
 ./build/az_test
 ```
 
-The Go subtree is also built by default from the repository root.
+> The Go subtree is included by default when building from the repository root.
 
 ### Go Engine (MATLAB)
 
 ```matlab
-cfg.N          = 5;
-cfg.hist       = 4;
-cfg.sims       = 50;
-cfg.cpuct      = 1.5;
-cfg.komi       = 6.5;
-cfg.maxPlies   = 50;
-cfg.tauPlies   = 10;
-cfg.noise      = true;
-cfg.noiseAlpha = 0.03;
-cfg.noiseEps   = 0.25;
-cfg.seed       = 42;
+cfg.N = 5;  cfg.hist = 4;  cfg.sims = 50;  cfg.cpuct = 1.5;
+cfg.komi = 6.5;  cfg.maxPlies = 50;  cfg.tauPlies = 10;
+cfg.noise = true;  cfg.noiseAlpha = 0.03;  cfg.noiseEps = 0.25;
+cfg.seed = 42;
 
 D = (2 * cfg.hist + 1) * cfg.N^2;
 A = cfg.N^2 + 1;
@@ -103,50 +95,50 @@ data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
 
 ```mermaid
 flowchart LR
-    A[Vessel State] --> B[Waypoint Guidance]
+    A([Vessel State]) --> B[Waypoint Guidance]
     B --> C{Safety Gate}
     C -->|Accept| D[Kinematic Update]
-    C -->|Reject| E[Hold / Log]
+    C -->|Reject| E[Hold]
     D --> F[Sensor Observation]
     F --> G[Kalman Track]
-    G --> H[CPA / TCPA]
-    D --> A
+    G --> H([CPA / TCPA])
+    D -.-> A
 ```
 
 | Phase | Capability | Binary |
-|-------|------------|--------|
-| 1 | Kinematic model, waypoint guidance, safety gate | `sim_nav_safety` |
-| 2–4 | Sensor model, tracking, COLREGs fixtures | `phase_demo` |
+|:------|:-----------|:-------|
+| 1 | Kinematic model · guidance · safety gate | `sim_nav_safety` |
+| 2–4 | Sensors · tracking · COLREGs fixtures | `phase_demo` |
 
-Further detail: [`docs/PHASES.md`](docs/PHASES.md).
+Details → [`docs/PHASES.md`](docs/PHASES.md)
 
 ### Go Pipeline
 
 ```mermaid
 flowchart LR
-    A[netInit] --> B[selfplay]
+    A([netInit]) --> B[selfplay]
     B --> C[MCTS]
-    C --> D[features + netForward]
-    C --> E[PUCT selection]
+    C --> D[features + forward]
+    C --> E[PUCT]
     E --> F[applyAction]
     F --> C
-    B --> G[visit counts + outcome z]
-    G --> H[netTrain]
-    H --> A
+    B --> G[policy + outcome]
+    G --> H([netTrain])
+    H -.-> A
 ```
 
-The search uses PUCT selection with network priors and Dirichlet noise at the root. Value backups alternate sign with player turn. Training minimizes cross-entropy on the visit-count policy plus mean-squared error on the outcome.
+PUCT selection with network priors and root Dirichlet noise. Value backups flip sign with the player to move. Training loss is cross-entropy on the visit-count policy plus mean-squared error on the outcome.
 
 | Module | Path |
-|--------|------|
+|:-------|:-----|
 | Rules | `matlab/+go/Board.m` |
 | Features | `matlab/+az/features.m` |
-| Network | `matlab/+az/netInit.m`, `netForward.m`, `netTrain.m` |
+| Network | `matlab/+az/net{Init,Forward,Train}.m` |
 | Search | `matlab/+az/mcts.m` |
 | Self-play | `matlab/+az/selfplay.m` |
-| C++ implementation | `cpp/` |
+| C++ | `cpp/` |
 
-Network structure: [`docs/network_tree.xml`](docs/network_tree.xml).
+Network diagram → [`docs/network_tree.xml`](docs/network_tree.xml)
 
 ---
 
@@ -164,4 +156,4 @@ cpp/                 C++ Go engine
 
 ## License
 
-This project is licensed under the GNU Affero General Public License v3.0 only. See [LICENSE](LICENSE).
+Licensed under the **GNU Affero General Public License v3.0 only**. See [LICENSE](LICENSE).
