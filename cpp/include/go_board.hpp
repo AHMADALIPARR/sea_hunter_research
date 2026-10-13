@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Uncertified — research prototype, not for operational use.
 // Copyright (C) 2026 AHMAD ALI PARR / SnapKitty Research Lab
-// NOTE: Header extracted from truncated dump; implementation incomplete.
+//
+// TODO: Replace this partial header with the complete go_board.hpp
+//       once the full source is available. Current version is truncated.
+//       Methods below are declared only so MCTS/self-play can link.
 
 #pragma once
 // Full Go rules: placement, capture, simple ko, pass, Tromp-Taylor scoring.
@@ -38,7 +41,8 @@ public:
     int8_t stone_at(int idx) const { return stones_[idx]; }
     std::optional<int> ko_point() const { return ko_; }
 
-    // Methods referenced by MCTS / self-play (stubs until full impl)
+    // TODO: Replace stubs below with full rules implementation
+    // (capture, simple ko, suicide ban, two-pass terminal, Tromp-Taylor scoring).
     bool is_terminal() const;
     float outcome() const;
     float outcome_to_play() const;
