@@ -13,6 +13,19 @@ The repository contains two independent components:
 
 Both components are clean-room implementations. No proprietary source material is used.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Maritime Simulation](#maritime-simulation)
+  - [Go Engine (C++)](#go-engine-c)
+  - [Go Engine (MATLAB)](#go-engine-matlab)
+- [Architecture](#architecture)
+  - [Maritime Pipeline](#maritime-pipeline)
+  - [Go Pipeline](#go-pipeline)
+- [Project Structure](#project-structure)
+- [License](#license)
+
 ## Installation
 
 **Requirements**
@@ -65,9 +78,19 @@ data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
 
 ## Architecture
 
-### Maritime
+### Maritime Pipeline
 
-State estimation and guidance are separated from the safety gate. Sensor observations feed a constant-velocity Kalman filter. Encounter geometry is evaluated with CPA/TCPA under a constant-velocity assumption.
+```mermaid
+flowchart LR
+    A[Vessel State] --> B[Waypoint Guidance]
+    B --> C{Safety Gate}
+    C -->|Accept| D[Kinematic Update]
+    C -->|Reject| E[Hold / Log]
+    D --> F[Sensor Observation]
+    F --> G[Kalman Track]
+    G --> H[CPA / TCPA]
+    D --> A
+```
 
 | Phase | Capability | Binary |
 |-------|------------|--------|
@@ -76,7 +99,20 @@ State estimation and guidance are separated from the safety gate. Sensor observa
 
 See [`docs/PHASES.md`](docs/PHASES.md).
 
-### Go
+### Go Pipeline
+
+```mermaid
+flowchart LR
+    A[netInit] --> B[selfplay]
+    B --> C[MCTS]
+    C --> D[features + netForward]
+    C --> E[PUCT selection]
+    E --> F[applyAction]
+    F --> C
+    B --> G[visit counts + outcome z]
+    G --> H[netTrain]
+    H --> A
+```
 
 The search uses PUCT selection with network priors and Dirichlet noise at the root. Value backups alternate sign with player turn. Training minimizes cross-entropy on the visit-count policy plus mean-squared error on the outcome.
 
