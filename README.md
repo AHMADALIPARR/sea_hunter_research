@@ -1,68 +1,81 @@
 # Sea Hunter Research
 
-Clean-room maritime autonomy simulation platform and AlphaZero-style Go research.
-
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](LICENSE)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)]()
 [![MATLAB](https://img.shields.io/badge/MATLAB-R2023b+-orange.svg)]()
 
-Simulation-only research code. Not operational, not certified, not derived from any proprietary Sea Hunter source.
+Clean-room research repository containing two independent threads:
 
-## Overview
+1. **Maritime autonomy simulation** — progressive phases from kinematic vessel + safety gate through sensors, tracking, and COLREGs encounter fixtures.
+2. **AlphaZero-style Go** — complete rules engine, MLP policy-value network, full MCTS, and self-play pipeline (MATLAB + C++).
 
-Two independent research threads live in this repository:
+## Maritime Pipeline
 
-1. **Maritime autonomy scaffold** — progressive simulation phases from a minimal safety-gated kinematic vessel to sensor models, tracking, and COLREGs-inspired encounter fixtures.
-2. **AlphaZero-style Go engine** — clean-room rules implementation (area scoring, positional superko) plus MCTS and self-play scaffolding in both MATLAB and C++.
+```
+Vessel state → waypoint guidance → safety gate → kinematic update
+                         ↓
+              noisy polar observation → Kalman track → CPA/TCPA
+```
 
-Neither thread claims completeness or operational readiness.
+![Feedback loop](docs/images/feedback_loop.png)
 
-## Maritime Phases
-
-| Phase | Status | Description |
+| Phase | Status | Entry point |
 |-------|--------|-------------|
-| 1 | Done | Kinematic vessel, waypoint guidance, independent safety gate |
-| 2 | Done | Noisy polar sensor model |
-| 3 | Done | Constant-velocity Kalman track |
-| 4 | Done | COLREGs encounter fixtures + CPA/TCPA |
-| 5+ | Planned | Hydrodynamics, full rule engine, multi-target association |
-
-See [`docs/PHASES.md`](docs/PHASES.md) for details.
-
-### Build & Run (Maritime)
+| 1 — kinematic + safety gate | Done | `./build/sim_nav_safety` |
+| 2 — sensor model | Done | `./build/phase_demo` |
+| 3 — Kalman track | Done | `./build/phase_demo` |
+| 4 — COLREGs fixtures + CPA/TCPA | Done | `./build/phase_demo` |
 
 ```bash
-cmake -S . -B build
-cmake --build build
-./build/sim_nav_safety   # Phase 1 baseline
-./build/phase_demo       # Phase 2–4 demo
+cmake -S . -B build && cmake --build build
+./build/sim_nav_safety
+./build/phase_demo
 ```
 
-## Go / AlphaZero Research
+Details: [`docs/PHASES.md`](docs/PHASES.md)
 
-- `matlab/+go/Board.m` — full rules class (area scoring, simple ko / superko)
-- `matlab/+az/` — self-play and supporting functions
-- `cpp/` — C++ GoBoard with positional superko + optional dead-stone removal, plus MCTS skeleton
+## Go / AlphaZero Pipeline
+
+```
+netInit → selfplay (MCTS + features + applyAction) → netTrain
+                ↓
+         visit-count policy + outcome z
+```
+
+| Component | Location |
+|-----------|----------|
+| Rules engine | `matlab/+go/Board.m` |
+| Features | `matlab/+az/features.m` |
+| MLP network | `matlab/+az/netInit.m`, `netForward.m`, `netTrain.m` |
+| MCTS | `matlab/+az/mcts.m` |
+| Self-play | `matlab/+az/selfplay.m` |
+| C++ engine | `cpp/` (`GoBoard`, `MCTS`, `az_selfplay`) |
 
 ```bash
-cd cpp && mkdir -p build && cd build
-cmake .. && make
-./az_selfplay
+# MATLAB (from repo root, with +go/+az on path)
+P = az.netInit(D, A, H, seed);
+traj = az.selfplay(P, cfg, 1);
+data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
+[P, loss] = az.netTrain(P, data, 10, 0.01, 1e-4);
+
+# C++
+cd cpp && cmake -S . -B build && cmake --build build
+./build/az_selfplay
+./build/az_test
 ```
 
-## Repository Layout
+Network architecture diagram: [`docs/network_tree.xml`](docs/network_tree.xml)
+
+## Layout
 
 ```
-src/                  Maritime simulation sources
-docs/                 Architecture, phases, provenance, interface
-matlab/+go/           Go rules engine
-matlab/+az/           AlphaZero self-play scaffolding
-cpp/                  C++ GoBoard + MCTS
-tests/                Test plans
+src/                 Maritime sources
+docs/                PHASES.md, network_tree.xml, architecture notes
+matlab/+go/          Go rules
+matlab/+az/          Features, MLP, MCTS, self-play, training
+cpp/                 C++ GoBoard + MCTS + self-play
 ```
 
 ## License
 
-**AGPL-3.0-only**. All source files carry `SPDX-License-Identifier: AGPL-3.0-only`.
-
-This is research software. It is not certified for any operational use, has no hardware interface, and makes no claim of formal verification or COLREGs compliance.
+AGPL-3.0-only. Research code only.
