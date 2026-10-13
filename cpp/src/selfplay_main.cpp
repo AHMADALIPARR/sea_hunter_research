@@ -27,10 +27,15 @@ int main(int argc, char** argv) {
         MCTS mcts(random_evaluator, 1.5f);
         auto t0 = std::chrono::steady_clock::now();
         int moves = 0;
-        while (!board.is_terminal() && moves < size * size * 2) {
+        while (moves < size * size * 2) {
+            if (board.in_dead_removal_phase()) {
+                board.remove_dead({}); // clear phase; treat as terminal
+                break;
+            }
+            if (board.is_terminal()) break;
+
             bool noise = moves < 10;
             auto pi = mcts.search(board, sims, noise);
-            // Sample from visit policy
             std::discrete_distribution<int> dist(pi.begin(), pi.end());
             int action = dist(rng);
             auto res = board.play(action);
