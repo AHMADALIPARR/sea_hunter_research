@@ -26,13 +26,19 @@ Both components are clean-room implementations. No proprietary source material i
 - [Project Structure](#project-structure)
 - [License](#license)
 
+---
+
 ## Installation
 
 **Requirements**
 
-- C++17 compiler
-- CMake 3.16 or later
-- MATLAB R2023b or later (MATLAB Go pipeline only)
+| Component | Version |
+|-----------|---------|
+| C++ compiler | C++17 |
+| CMake | 3.16+ |
+| MATLAB | R2023b+ (Go pipeline only) |
+
+---
 
 ## Usage
 
@@ -42,8 +48,11 @@ Both components are clean-room implementations. No proprietary source material i
 cmake -S . -B build
 cmake --build build
 
-./build/sim_nav_safety    # Phase 1: guidance and safety gate
-./build/phase_demo        # Phases 2–4: sensing, tracking, encounter analysis
+# Phase 1: guidance and safety gate
+./build/sim_nav_safety
+
+# Phases 2–4: sensing, tracking, encounter analysis
+./build/phase_demo
 ```
 
 ### Go Engine (C++)
@@ -53,7 +62,9 @@ cd cpp
 cmake -S . -B build
 cmake --build build
 
-./build/az_selfplay 5 50 3   # board size, simulations, games
+# board size, simulations, games
+./build/az_selfplay 5 50 3
+
 ./build/az_test
 ```
 
@@ -62,19 +73,29 @@ The Go subtree is also built by default from the repository root.
 ### Go Engine (MATLAB)
 
 ```matlab
-cfg.N = 5; cfg.hist = 4; cfg.sims = 50; cfg.cpuct = 1.5;
-cfg.komi = 6.5; cfg.maxPlies = 50; cfg.tauPlies = 10;
-cfg.noise = true; cfg.noiseAlpha = 0.03; cfg.noiseEps = 0.25; cfg.seed = 42;
+cfg.N          = 5;
+cfg.hist       = 4;
+cfg.sims       = 50;
+cfg.cpuct      = 1.5;
+cfg.komi       = 6.5;
+cfg.maxPlies   = 50;
+cfg.tauPlies   = 10;
+cfg.noise      = true;
+cfg.noiseAlpha = 0.03;
+cfg.noiseEps   = 0.25;
+cfg.seed       = 42;
 
 D = (2 * cfg.hist + 1) * cfg.N^2;
 A = cfg.N^2 + 1;
 H = 64;
 
-P = az.netInit(D, A, H, cfg.seed);
+P    = az.netInit(D, A, H, cfg.seed);
 traj = az.selfplay(P, cfg, 1);
 data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
 [P, loss] = az.netTrain(P, data, 10, 0.01, 1e-4);
 ```
+
+---
 
 ## Architecture
 
@@ -97,7 +118,7 @@ flowchart LR
 | 1 | Kinematic model, waypoint guidance, safety gate | `sim_nav_safety` |
 | 2–4 | Sensor model, tracking, COLREGs fixtures | `phase_demo` |
 
-See [`docs/PHASES.md`](docs/PHASES.md).
+Further detail: [`docs/PHASES.md`](docs/PHASES.md).
 
 ### Go Pipeline
 
@@ -125,17 +146,21 @@ The search uses PUCT selection with network priors and Dirichlet noise at the ro
 | Self-play | `matlab/+az/selfplay.m` |
 | C++ implementation | `cpp/` |
 
-Network structure: [`docs/network_tree.xml`](docs/network_tree.xml)
+Network structure: [`docs/network_tree.xml`](docs/network_tree.xml).
+
+---
 
 ## Project Structure
 
-```
+```text
 src/                 Maritime simulation
 docs/                Design notes and diagrams
 matlab/+go/          Go rules
 matlab/+az/          Features, network, search, training
 cpp/                 C++ Go engine
 ```
+
+---
 
 ## License
 
