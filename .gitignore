@@ -1,0 +1,17 @@
+build/
+*.o
+*.exe
+*.out
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.user
+*.swp
+.DS_Store
+*.mat
+*.fig
+__pycache__/
+*.pyc
+.idea/
+.vscode/
