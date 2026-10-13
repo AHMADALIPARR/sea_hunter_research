@@ -1,13 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Uncertified — research prototype, not for operational use.
 // Copyright (C) 2026 AHMAD ALI PARR / SnapKitty Research Lab
-//
-// TODO: Replace this partial header with the complete go_board.hpp
-//       once the full source is available. Current version is truncated.
-//       Methods below are declared only so MCTS/self-play can link.
 
 #pragma once
-// Full Go rules: placement, capture, simple ko, pass, Tromp-Taylor scoring.
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -40,22 +35,27 @@ public:
     Player to_play() const { return to_play_; }
     int8_t stone_at(int idx) const { return stones_[idx]; }
     std::optional<int> ko_point() const { return ko_; }
+    int passes() const { return passes_; }
 
-    // TODO: Replace stubs below with full rules implementation
-    // (capture, simple ko, suicide ban, two-pass terminal, Tromp-Taylor scoring).
     bool is_terminal() const;
-    float outcome() const;
-    float outcome_to_play() const;
-    MoveResult play(int action);
+    float outcome() const;          // black - white - komi (area)
+    float outcome_to_play() const;  // from current player perspective
+    MoveResult play(int action);    // 0..n-1 place, n = pass
     std::vector<int> legal_moves() const;
 
 private:
-    int size_ = 9;
-    int n_ = 81;
-    float komi_ = 6.5f;
+    int size_;
+    int n_;
+    float komi_;
     Player to_play_ = Player::Black;
     std::optional<int> ko_;
+    int passes_ = 0;
     std::array<int8_t, kMaxSize * kMaxSize> stones_{};
+
+    std::vector<int> neighbors(int idx) const;
+    std::pair<std::vector<int>, int> group_of(int idx) const;
+    bool would_be_suicide(int idx) const;
+    void place_and_capture(int idx);
 };
 
 } // namespace az
