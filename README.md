@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/guidance_demo.gif" alt="Guidance demo" width="640"/>
+  <img src="docs/images/guidance_loop.gif" alt="Guidance loop" width="640"/>
 </p>
 
 ---
