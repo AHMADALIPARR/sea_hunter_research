@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Raw XML tree of the AlphaZero-style Transformer policy-value network
+     Clean-room educational scaffold. Uncertified research prototype.
+     SPDX-License-Identifier: AGPL-3.0-only -->
+<network name="alphazero_transformer" type="policy-value" language="MATLAB">
+  <config>
+    <param name="boardSize" value="9"/>
+    <param name="dModel" value="128"/>
+    <param name="nHeads" value="4"/>
+    <param name="nBlocks" value="4"/>
+    <param name="dFF" value="256"/>
+    <param name="nPlanes" value="8"/>
+    <param name="layerNormEps" value="1e-5"/>
+    <param name="cPuct" value="1.5"/>
+  </config>
+
+  <input>
+    <tensor name="board" shape="[N,N]" dtype="int" encoding="+1 black, -1 white, 0 empty"/>
+    <scalar name="toPlay" values="+1|-1"/>
+  </input>
+
+  <encoder>
+    <planes name="encodeBoardPlanes" count="8">
+      <plane index="0" name="own_stones"/>
+      <plane index="1" name="opponent_stones"/>
+      <plane index="2" name="empty"/>
+      <plane index="3" name="to_play_black_constant"/>
+      <plane index="4" name="to_play_white_constant"/>
+      <plane index="5" name="liberties_proxy"/>
+      <plane index="6" name="board_edge"/>
+      <plane index="7" name="pass_indicator"/>
+    </planes>
+    <token_embed name="token.W" shape="[nPlanes, dModel]"/>
+    <position_embed name="pos" shape="[N*N+1, dModel]" note="absolute 2D + pass token"/>
+    <side_embed name="side.W" shape="[1, dModel]" note="side-to-move bias"/>
+  </encoder>
+
+  <transformer_blocks count="4" type="pre-LN">
+    <block index="1">
+      <layer_norm name="ln1"/>
+      <multi_head_attention heads="4" d_head="32">
+        <projection name="Wq" shape="[dModel, dModel]"/>
+        <projection name="Wk" shape="[dModel, dModel]"/>
+        <projection name="Wv" shape="[dModel, dModel]"/>
+        <projection name="Wo" shape="[dModel, dModel]"/>
+      </multi_head_attention>
+      <residual/>
+      <layer_norm name="ln2"/>
+      <ffn>
+        <linear name="W1" shape="[dModel, dFF]" activation="ReLU"/>
+        <linear name="W2" shape="[dFF, dModel]"/>
+      </ffn>
+      <residual/>
+    </block>
+    <block index="2" ref="1"/>
+    <block index="3" ref="1"/>
+    <block index="4" ref="1"/>
+  </transformer_blocks>
+
+  <heads>
+    <policy>
+      <per_point_logit name="policy.W" shape="[dModel, 1]" note="tokens 1..N*N"/>
+      <pass_logit name="pass.W" shape="[dModel, 1]" note="final token"/>
+      <mask name="legalMoveMask" note="occupancy + local liberty proxy"/>
+      <softmax/>
+    </policy>
+    <value>
+      <mean_pool/>
+      <mlp>
+        <linear name="value.W1" shape="[dModel, dModel/2]" activation="tanh"/>
+        <linear name="value.W2" shape="[dModel/2, 1]" activation="tanh"/>
+      </mlp>
+      <scalar note="from side-to-play perspective, range [-1,1]"/>
+    </value>
+  </heads>
+
+  <output>
+    <vector name="policy" length="N*N+1" note="placements + pass, illegal masked"/>
+    <scalar name="value" range="[-1,1]"/>
+  </output>
+
+  <search>
+    <puct formula="Q + c_puct * P * sqrt(sumN) / (1+N)"/>
+    <targets>
+      <pi note="visit-count policy, temperature"/>
+      <z note="terminal outcome from mover perspective"/>
+    </targets>
+  </search>
+</network>
