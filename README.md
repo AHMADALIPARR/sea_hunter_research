@@ -9,6 +9,78 @@ Clean-room research repository containing two independent threads:
 1. **Maritime autonomy simulation** — progressive phases from kinematic vessel + safety gate through sensors, tracking, and COLREGs encounter fixtures.
 2. **AlphaZero-style Go** — complete rules engine, MLP policy-value network, full MCTS, and self-play pipeline (MATLAB + C++).
 
+## How to run
+
+### Prerequisites
+- C++17 compiler (g++, clang++, or MSVC)
+- CMake 3.16+
+- MATLAB R2023b+ (only for the MATLAB Go pipeline)
+
+### Maritime (C++)
+
+From the repository root:
+
+```bash
+cmake -S . -B build
+cmake --build build
+
+# Phase 1: kinematic vessel + safety gate
+./build/sim_nav_safety
+
+# Phases 2–4: sensors, Kalman track, COLREGs fixtures + CPA/TCPA
+./build/phase_demo
+```
+
+### Go / AlphaZero (C++)
+
+```bash
+cd cpp
+cmake -S . -B build
+cmake --build build
+
+# Self-play with random evaluator (size, simulations, games)
+./build/az_selfplay 5 50 3
+
+# Basic rules tests
+./build/az_test
+```
+
+Or build everything from the root (Go subtree is included by default):
+
+```bash
+cmake -S . -B build && cmake --build build
+./build/az_selfplay
+./build/az_test
+```
+
+### Go / AlphaZero (MATLAB)
+
+From the repository root (so `+go` and `+az` are on the path):
+
+```matlab
+% Example config
+cfg.N = 5;
+cfg.hist = 4;
+cfg.sims = 50;
+cfg.cpuct = 1.5;
+cfg.komi = 6.5;
+cfg.maxPlies = 50;
+cfg.tauPlies = 10;
+cfg.noise = true;
+cfg.noiseAlpha = 0.03;
+cfg.noiseEps = 0.25;
+cfg.seed = 42;
+
+D = (2*cfg.hist + 1) * cfg.N^2;   % feature dimension
+A = cfg.N^2 + 1;                  % actions (points + pass)
+H = 64;                           % hidden size
+
+P = az.netInit(D, A, H, cfg.seed);
+traj = az.selfplay(P, cfg, 1);
+data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
+[P, loss] = az.netTrain(P, data, 10, 0.01, 1e-4);
+```
+
 ## Maritime Pipeline
 
 ```
@@ -25,12 +97,6 @@ Vessel state → waypoint guidance → safety gate → kinematic update
 | 2 — sensor model | Done | `./build/phase_demo` |
 | 3 — Kalman track | Done | `./build/phase_demo` |
 | 4 — COLREGs fixtures + CPA/TCPA | Done | `./build/phase_demo` |
-
-```bash
-cmake -S . -B build && cmake --build build
-./build/sim_nav_safety
-./build/phase_demo
-```
 
 Details: [`docs/PHASES.md`](docs/PHASES.md)
 
@@ -51,20 +117,7 @@ netInit → selfplay (MCTS + features + applyAction) → netTrain
 | Self-play | `matlab/+az/selfplay.m` |
 | C++ engine | `cpp/` (`GoBoard`, `MCTS`, `az_selfplay`) |
 
-```bash
-# MATLAB (from repo root, with +go/+az on path)
-P = az.netInit(D, A, H, seed);
-traj = az.selfplay(P, cfg, 1);
-data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
-[P, loss] = az.netTrain(P, data, 10, 0.01, 1e-4);
-
-# C++
-cd cpp && cmake -S . -B build && cmake --build build
-./build/az_selfplay
-./build/az_test
-```
-
-Network architecture diagram: [`docs/network_tree.xml`](docs/network_tree.xml)
+Network architecture: [`docs/network_tree.xml`](docs/network_tree.xml)
 
 ## Layout
 
