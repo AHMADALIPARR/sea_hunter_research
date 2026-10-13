@@ -23,6 +23,14 @@ Clean-room research platform with two independent components:
 | **Maritime simulation** | Kinematic vessel, safety gate, sensors, tracking, COLREGs fixtures |
 | **Go engine** | Rules, MLP policy-value network, MCTS, self-play training |
 
+## Research Context
+
+**Sea Hunter** is an unmanned surface vehicle developed under DARPA’s Anti-Submarine Warfare Continuous Trail Unmanned Vessel (ACTUV) program. The 132-foot (40 m) trimaran was designed and built by Leidos, christened in Portland, Oregon in April 2016, and later transitioned to the Office of Naval Research.<grok type="render_inline_citation" citation_id="71" />
+
+Public program goals included long-endurance autonomous operation (on the order of 60–90 days), sparse supervisory control rather than remote piloting, and compliance with the International Regulations for Preventing Collisions at Sea (COLREGs). The platform was sized for independent deployment and intended primarily for continuous trail of diesel-electric submarines, with modular payloads for other roles.<grok type="render_inline_citation" citation_id="73" />
+
+This repository is a clean-room research scaffold inspired by publicly described maritime-autonomy challenges (independent safety gating, sensor observation, tracking, and encounter geometry). It does not contain, reverse-engineer, or claim to reproduce any Sea Hunter software, weights, or proprietary design data.
+
 ## Table of Contents
 
 - [Installation](#installation)
