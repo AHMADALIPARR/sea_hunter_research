@@ -4,76 +4,58 @@
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)]()
 [![MATLAB](https://img.shields.io/badge/MATLAB-R2023b+-orange.svg)]()
 
-Clean-room research repository containing two independent threads:
+Research platform for maritime autonomy simulation and AlphaZero-style game-tree search.
 
-1. **Maritime autonomy simulation** — progressive phases from kinematic vessel + safety gate through sensors, tracking, and COLREGs encounter fixtures.
-2. **AlphaZero-style Go** — complete rules engine, MLP policy-value network, full MCTS, and self-play pipeline (MATLAB + C++).
+The repository contains two independent components:
 
-## How to run
+- **Maritime simulation** — kinematic vessel model, independent safety gate, sensor observation model, constant-velocity tracking, and COLREGs-inspired encounter fixtures.
+- **Go engine** — rules implementation (area scoring, positional superko), MLP policy-value network, Monte Carlo Tree Search, and self-play training pipeline.
 
-### Prerequisites
-- C++17 compiler (g++, clang++, or MSVC)
-- CMake 3.16+
-- MATLAB R2023b+ (only for the MATLAB Go pipeline)
+Both components are clean-room implementations. No proprietary source material is used.
 
-### Maritime (C++)
+## Installation
 
-From the repository root:
+**Requirements**
+
+- C++17 compiler
+- CMake 3.16 or later
+- MATLAB R2023b or later (MATLAB Go pipeline only)
+
+## Usage
+
+### Maritime Simulation
 
 ```bash
 cmake -S . -B build
 cmake --build build
 
-# Phase 1: kinematic vessel + safety gate
-./build/sim_nav_safety
-
-# Phases 2–4: sensors, Kalman track, COLREGs fixtures + CPA/TCPA
-./build/phase_demo
+./build/sim_nav_safety    # Phase 1: guidance and safety gate
+./build/phase_demo        # Phases 2–4: sensing, tracking, encounter analysis
 ```
 
-### Go / AlphaZero (C++)
+### Go Engine (C++)
 
 ```bash
 cd cpp
 cmake -S . -B build
 cmake --build build
 
-# Self-play with random evaluator (size, simulations, games)
-./build/az_selfplay 5 50 3
-
-# Basic rules tests
+./build/az_selfplay 5 50 3   # board size, simulations, games
 ./build/az_test
 ```
 
-Or build everything from the root (Go subtree is included by default):
+The Go subtree is also built by default from the repository root.
 
-```bash
-cmake -S . -B build && cmake --build build
-./build/az_selfplay
-./build/az_test
-```
-
-### Go / AlphaZero (MATLAB)
-
-From the repository root (so `+go` and `+az` are on the path):
+### Go Engine (MATLAB)
 
 ```matlab
-% Example config
-cfg.N = 5;
-cfg.hist = 4;
-cfg.sims = 50;
-cfg.cpuct = 1.5;
-cfg.komi = 6.5;
-cfg.maxPlies = 50;
-cfg.tauPlies = 10;
-cfg.noise = true;
-cfg.noiseAlpha = 0.03;
-cfg.noiseEps = 0.25;
-cfg.seed = 42;
+cfg.N = 5; cfg.hist = 4; cfg.sims = 50; cfg.cpuct = 1.5;
+cfg.komi = 6.5; cfg.maxPlies = 50; cfg.tauPlies = 10;
+cfg.noise = true; cfg.noiseAlpha = 0.03; cfg.noiseEps = 0.25; cfg.seed = 42;
 
-D = (2*cfg.hist + 1) * cfg.N^2;   % feature dimension
-A = cfg.N^2 + 1;                  % actions (points + pass)
-H = 64;                           % hidden size
+D = (2 * cfg.hist + 1) * cfg.N^2;
+A = cfg.N^2 + 1;
+H = 64;
 
 P = az.netInit(D, A, H, cfg.seed);
 traj = az.selfplay(P, cfg, 1);
@@ -81,54 +63,44 @@ data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
 [P, loss] = az.netTrain(P, data, 10, 0.01, 1e-4);
 ```
 
-## Maritime Pipeline
+## Architecture
 
-```
-Vessel state → waypoint guidance → safety gate → kinematic update
-                         ↓
-              noisy polar observation → Kalman track → CPA/TCPA
-```
+### Maritime
 
-![Feedback loop](docs/images/feedback_loop.png)
+State estimation and guidance are separated from the safety gate. Sensor observations feed a constant-velocity Kalman filter. Encounter geometry is evaluated with CPA/TCPA under a constant-velocity assumption.
 
-| Phase | Status | Entry point |
-|-------|--------|-------------|
-| 1 — kinematic + safety gate | Done | `./build/sim_nav_safety` |
-| 2 — sensor model | Done | `./build/phase_demo` |
-| 3 — Kalman track | Done | `./build/phase_demo` |
-| 4 — COLREGs fixtures + CPA/TCPA | Done | `./build/phase_demo` |
+| Phase | Capability | Binary |
+|-------|------------|--------|
+| 1 | Kinematic model, waypoint guidance, safety gate | `sim_nav_safety` |
+| 2–4 | Sensor model, tracking, COLREGs fixtures | `phase_demo` |
 
-Details: [`docs/PHASES.md`](docs/PHASES.md)
+See [`docs/PHASES.md`](docs/PHASES.md).
 
-## Go / AlphaZero Pipeline
+### Go
 
-```
-netInit → selfplay (MCTS + features + applyAction) → netTrain
-                ↓
-         visit-count policy + outcome z
-```
+The search uses PUCT selection with network priors and Dirichlet noise at the root. Value backups alternate sign with player turn. Training minimizes cross-entropy on the visit-count policy plus mean-squared error on the outcome.
 
-| Component | Location |
-|-----------|----------|
-| Rules engine | `matlab/+go/Board.m` |
+| Module | Path |
+|--------|------|
+| Rules | `matlab/+go/Board.m` |
 | Features | `matlab/+az/features.m` |
-| MLP network | `matlab/+az/netInit.m`, `netForward.m`, `netTrain.m` |
-| MCTS | `matlab/+az/mcts.m` |
+| Network | `matlab/+az/netInit.m`, `netForward.m`, `netTrain.m` |
+| Search | `matlab/+az/mcts.m` |
 | Self-play | `matlab/+az/selfplay.m` |
-| C++ engine | `cpp/` (`GoBoard`, `MCTS`, `az_selfplay`) |
+| C++ implementation | `cpp/` |
 
-Network architecture: [`docs/network_tree.xml`](docs/network_tree.xml)
+Network structure: [`docs/network_tree.xml`](docs/network_tree.xml)
 
-## Layout
+## Project Structure
 
 ```
-src/                 Maritime sources
-docs/                PHASES.md, network_tree.xml, architecture notes
+src/                 Maritime simulation
+docs/                Design notes and diagrams
 matlab/+go/          Go rules
-matlab/+az/          Features, MLP, MCTS, self-play, training
-cpp/                 C++ GoBoard + MCTS + self-play
+matlab/+az/          Features, network, search, training
+cpp/                 C++ Go engine
 ```
 
 ## License
 
-AGPL-3.0-only. Research code only.
+This project is licensed under the GNU Affero General Public License v3.0 only. See [LICENSE](LICENSE).
