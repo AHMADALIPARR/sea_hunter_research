@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Raw repository tree structure — uncertified research prototype -->
+<repository name="sea_hunter_research" license="AGPL-3.0-only">
+  <file name="README.md"/>
+  <file name="CMakeLists.txt"/>
+  <file name="LICENSE"/>
+  <directory name="src">
+    <file name="sim_nav_safety.cpp"/>
+    <file name="phase_demo.cpp"/>
+    <file name="sensor_models.hpp"/>
+    <file name="kalman_track.hpp"/>
+    <file name="colregs_scenarios.hpp"/>
+  </directory>
+  <directory name="docs">
+    <file name="PHASES.md"/>
+    <file name="ARCHITECTURE_GAP_ANALYSIS.md"/>
+    <file name="INTERFACE_CONTRACT.md"/>
+    <file name="INTERFACE.md"/>
+    <file name="SOURCE_PROVENANCE.md"/>
+    <file name="repo_tree.xml"/>
+    <directory name="images">
+      <file name="feedback_loop.png"/>
+      <file name="simulation_demo.png"/>
+    </directory>
+  </directory>
+  <directory name="matlab">
+    <directory name="+go">
+      <file name="Board.m"/>
+    </directory>
+    <directory name="+az">
+      <file name="selfplay.m"/>
+    </directory>
+    <file name="alphazero_transformer_recreation.m"/>
+    <file name="golden_vectors.json"/>
+    <file name="test_golden.m"/>
+    <file name="go_board_helpers.m"/>
+    <file name="test_golden_and_snippets.m"/>
+  </directory>
+  <directory name="cpp">
+    <file name="CMakeLists.txt"/>
+    <directory name="include">
+      <file name="go_board.hpp"/>
+      <file name="mcts.hpp"/>
+    </directory>
+    <directory name="src">
+      <file name="go_board.cpp"/>
+      <file name="mcts.cpp"/>
+      <file name="selfplay_main.cpp"/>
+      <file name="test_go_board.cpp"/>
+    </directory>
+  </directory>
+  <directory name="tests">
+    <file name="TEST_PLAN.md"/>
+  </directory>
+</repository>
