@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Uncertified — research prototype, not for operational use.
+// Copyright (C) 2026 AHMAD ALI PARR / SnapKitty Research Lab
+
 #include <cmath>
 #include <iomanip>
 #include <iostream>
