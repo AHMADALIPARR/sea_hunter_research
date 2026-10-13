@@ -1,0 +1,7 @@
+simulation_only=true
+warning=prototype_not_COLREGS_compliant_or_validated_for_real_vessels
+step=0 t=0.000 x=0.000 y=0.000 proposed_heading=0.322 proposed_speed=2.000 safety=ACCEPTED
+step=1 t=1.000 x=1.897 y=0.632 proposed_heading=0.322 proposed_speed=2.000 safety=ACCEPTED
+step=2 t=2.000 x=3.795 y=1.265 proposed_heading=0.322 proposed_speed=2.000 safety=ACCEPTED
+step=3 t=3.000 x=5.692 y=1.897 proposed_heading=0.322 proposed_speed=2.000 safety=REJECT_HAZARD_MARGIN
+command_not_applied=true
