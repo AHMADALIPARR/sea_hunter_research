@@ -36,7 +36,17 @@ The core loop: vessel state → waypoint guidance → independent safety gate �
 - [`src/sim_nav_safety.cpp`](src/sim_nav_safety.cpp) — minimal C++ simulation → waypoint guidance → safety gate loop. SPDX: AGPL-3.0-only (uncertified).
 - [`CMakeLists.txt`](CMakeLists.txt) — build instructions.
 - [`tests/TEST_PLAN.md`](tests/TEST_PLAN.md) — initial verification plan.
-- [`matlab/`](matlab/) — optional AlphaZero-style Transformer reference core (clean-room, educational).
+
+## AlphaZero / Go Rules Research (clean-room)
+
+Extracted from provided dumps into proper packages:
+
+- [`matlab/+go/Board.m`](matlab/+go/Board.m) — full `go.Board` class (area scoring, simple ko, suicide ban, two passes).
+- [`matlab/+az/selfplay.m`](matlab/+az/selfplay.m) — self-play driver.
+- [`docs/INTERFACE.md`](docs/INTERFACE.md) — canonical cross-language interface draft.
+- [`cpp/`](cpp/) — C++ skeleton (CMake, MCTS, self-play main).
+
+All carry `SPDX-License-Identifier: AGPL-3.0-only` (uncertified).
 
 ## Build and Run
 
