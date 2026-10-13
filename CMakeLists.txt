@@ -14,3 +14,8 @@ else()
   target_compile_options(sim_nav_safety PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(phase_demo PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+option(BUILD_GO "Build the C++ Go/AlphaZero subtree" ON)
+if(BUILD_GO)
+  add_subdirectory(cpp)
+endif()
