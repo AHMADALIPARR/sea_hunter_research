@@ -120,6 +120,32 @@ data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
 
 ## Architecture
 
+### System Overview
+
+The repository is organized as two independent stacks. The maritime stack advances a vessel state under a safety-gated guidance loop and optional perception stages. The Go stack implements rules, search, and (in MATLAB) training.
+
+```mermaid
+graph LR
+    subgraph Maritime
+        M1[Guidance]
+        M2[Safety Gate]
+        M3[Kinematics]
+        M4[Sensor]
+        M5[Tracker]
+        M1 --> M2 --> M3 --> M4 --> M5
+    end
+    subgraph Go
+        G1[Rules]
+        G2[MCTS]
+        G3[Network]
+        G4[Self-play]
+        G1 --> G2
+        G3 --> G2
+        G2 --> G4
+        G4 --> G3
+    end
+```
+
 ### Maritime
 
 Guidance and safety enforcement are decoupled. A candidate command is generated from the current state and the active waypoint; the safety gate evaluates it independently and either permits the kinematic update or holds the vessel. Later phases introduce a polar observation model with additive Gaussian noise, a constant-velocity Kalman filter for track maintenance, and closed-form CPA/TCPA under a constant-velocity relative-motion assumption.
