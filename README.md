@@ -16,42 +16,42 @@
 
 ---
 
-## What this is
+## Overview
 
-This repository is a clean-room research platform for two separate problems:
+This repository contains two independent clean-room research components:
 
-1. **Maritime autonomy simulation** — a progressive scaffold that starts with a simple kinematic vessel and safety gate, then adds noisy sensors, tracking, and encounter analysis. The animation above shows the basic guidance idea: a vessel following a path toward a waypoint under an independent safety check.
-2. **AlphaZero-style Go** — a complete rules engine, a small MLP policy-value network, Monte Carlo Tree Search, and a self-play training loop. Implemented in both MATLAB and C++.
+1. **Maritime autonomy simulation.** A progressive kinematic model of an unmanned surface vessel. Guidance produces a proposed command; an independent safety gate accepts or rejects it before the state is advanced. Subsequent stages introduce a noisy polar sensor, a constant-velocity Kalman filter, and encounter geometry analysis (CPA/TCPA). The animation above illustrates the basic closed-loop guidance concept.
+2. **AlphaZero-style Go engine.** A rules implementation (area scoring, positional superko), a small multilayer-perceptron policy-value network, Monte Carlo Tree Search with PUCT selection, and a self-play training loop. The same pipeline is available in MATLAB (trainable) and C++ (rules + search).
 
-The two threads share no code. They are collected here because both involve sequential decision-making under constraints (safety rules at sea; legal moves on a board).
+The components share no source code. They are co-located because both address sequential decision-making under hard constraints.
 
-## Research Context
+## Background
 
-**Sea Hunter** is an unmanned surface vehicle developed under DARPA’s Anti-Submarine Warfare Continuous Trail Unmanned Vessel (ACTUV) program. The 132-foot (40 m) trimaran was designed and built by Leidos, christened in Portland, Oregon in April 2016, and later transitioned to the Office of Naval Research.
+**Sea Hunter** is an unmanned surface vehicle developed under the Defense Advanced Research Projects Agency (DARPA) Anti-Submarine Warfare Continuous Trail Unmanned Vessel (ACTUV) program. The 132-foot (40 m) trimaran was designed and constructed by Leidos, christened in Portland, Oregon in April 2016, and subsequently transitioned to the Office of Naval Research.
 
-Public program goals included long-endurance autonomous operation (on the order of 60–90 days), sparse supervisory control rather than remote piloting, and compliance with the International Regulations for Preventing Collisions at Sea (COLREGs). The platform was sized for independent deployment and intended primarily for continuous trail of diesel-electric submarines, with modular payloads for other roles.
+Publicly stated program objectives included long-endurance autonomous operation (nominally 60–90 days), sparse supervisory control rather than continuous remote piloting, and compliance with the International Regulations for Preventing Collisions at Sea (COLREGs). The vessel was sized for independent deployment and was intended primarily for continuous trail of diesel-electric submarines, with a modular payload architecture supporting additional missions.
 
-This repository is inspired by publicly described challenges in maritime autonomy (independent safety gating, sensor observation, tracking, encounter geometry). It does not contain, reverse-engineer, or claim to reproduce any Sea Hunter software, weights, or proprietary design data.
+This repository is a research scaffold motivated by publicly described problems in maritime autonomy: separation of guidance from safety enforcement, sensor observation under uncertainty, track maintenance, and encounter assessment. It does not contain, reverse-engineer, or claim to reproduce any Sea Hunter software, trained weights, or proprietary design information.
 
 ## Table of Contents
 
-- [What this is](#what-this-is)
-- [Research Context](#research-context)
-- [Installation](#installation)
+- [Overview](#overview)
+- [Background](#background)
+- [Requirements](#requirements)
 - [Usage](#usage)
 - [Architecture](#architecture)
-- [Project Structure](#project-structure)
+- [Repository Layout](#repository-layout)
 - [License](#license)
 
 ---
 
-## Installation
+## Requirements
 
-| Tool | Version |
-|------|---------|
-| C++ compiler | C++17 |
-| CMake | 3.16+ |
-| MATLAB | R2023b+ (Go pipeline only) |
+| Tool | Minimum Version | Notes |
+|------|-----------------|-------|
+| C++ compiler | C++17 | g++, clang++, or MSVC |
+| CMake | 3.16 | |
+| MATLAB | R2023b | Required only for the MATLAB Go pipeline |
 
 ---
 
@@ -59,17 +59,22 @@ This repository is inspired by publicly described challenges in maritime autonom
 
 ### Maritime Simulation
 
-The maritime code builds two binaries from the repository root:
+Configure and build from the repository root:
 
 ```bash
 cmake -S . -B build
 cmake --build build
-
-./build/sim_nav_safety    # Phase 1 — guidance + safety gate
-./build/phase_demo        # Phases 2–4 — sensing, tracking, encounters
 ```
 
-`sim_nav_safety` runs a short closed-loop demonstration of waypoint guidance with an independent safety check. `phase_demo` loads a standard encounter, generates noisy polar observations, updates a Kalman track, and reports CPA/TCPA.
+Two executables are produced:
+
+- `sim_nav_safety` — Phase 1 demonstration. A kinematic vessel follows a short waypoint sequence. Each guidance command is evaluated by an independent safety gate before the state is integrated.
+- `phase_demo` — Phases 2–4 demonstration. A standard encounter is loaded, noisy polar observations are generated, a constant-velocity Kalman filter maintains a track, and CPA/TCPA are computed from the estimated relative motion.
+
+```bash
+./build/sim_nav_safety
+./build/phase_demo
+```
 
 ### Go Engine (C++)
 
@@ -78,21 +83,28 @@ cd cpp
 cmake -S . -B build
 cmake --build build
 
-./build/az_selfplay 5 50 3   # board size, simulations, games
+./build/az_selfplay 5 50 3   # board size, simulations per move, games
 ./build/az_test
 ```
 
-The C++ self-play binary uses a random evaluator (no trained network). It is useful for exercising the rules engine and search. The Go subtree is also built by default from the repository root.
+The C++ self-play binary uses a uniform random evaluator. It exercises the rules engine (including positional superko and the optional dead-stone removal phase) and the MCTS implementation. The `cpp/` subtree is also included by default when configuring from the repository root.
 
 ### Go Engine (MATLAB)
 
-The MATLAB path implements the full trainable loop: feature extraction, MLP forward pass, MCTS with network priors, self-play, and manual backprop training.
+The MATLAB implementation provides the complete training loop: history-based feature planes, a two-hidden-layer MLP, MCTS with network priors and root Dirichlet noise, self-play trajectory collection, and minibatch SGD with manually derived gradients.
 
 ```matlab
-cfg.N = 5;  cfg.hist = 4;  cfg.sims = 50;  cfg.cpuct = 1.5;
-cfg.komi = 6.5;  cfg.maxPlies = 50;  cfg.tauPlies = 10;
-cfg.noise = true;  cfg.noiseAlpha = 0.03;  cfg.noiseEps = 0.25;
-cfg.seed = 42;
+cfg.N          = 5;
+cfg.hist       = 4;
+cfg.sims       = 50;
+cfg.cpuct      = 1.5;
+cfg.komi       = 6.5;
+cfg.maxPlies   = 50;
+cfg.tauPlies   = 10;
+cfg.noise      = true;
+cfg.noiseAlpha = 0.03;
+cfg.noiseEps   = 0.25;
+cfg.seed       = 42;
 
 D = (2 * cfg.hist + 1) * cfg.N^2;
 A = cfg.N^2 + 1;
@@ -108,9 +120,9 @@ data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
 
 ## Architecture
 
-### Maritime Pipeline
+### Maritime
 
-Guidance and the safety gate are kept separate. A proposed command is checked before it is applied to the kinematic model. Later phases add a noisy polar sensor, a constant-velocity Kalman filter, and encounter geometry (CPA/TCPA).
+Guidance and safety enforcement are decoupled. A candidate command is generated from the current state and the active waypoint; the safety gate evaluates it independently and either permits the kinematic update or holds the vessel. Later phases introduce a polar observation model with additive Gaussian noise, a constant-velocity Kalman filter for track maintenance, and closed-form CPA/TCPA under a constant-velocity relative-motion assumption.
 
 ```mermaid
 graph TD
@@ -124,16 +136,16 @@ graph TD
     D --> A
 ```
 
-| Phase | Capability | Binary |
-|:------|:-----------|:-------|
-| 1 | Kinematic model · guidance · safety gate | `sim_nav_safety` |
-| 2–4 | Sensors · tracking · COLREGs fixtures | `phase_demo` |
+| Phase | Capability | Executable |
+|:------|:-----------|:-----------|
+| 1 | Kinematic model, waypoint guidance, independent safety gate | `sim_nav_safety` |
+| 2–4 | Polar sensor model, constant-velocity Kalman filter, COLREGs encounter fixtures, CPA/TCPA | `phase_demo` |
 
-Details → [`docs/PHASES.md`](docs/PHASES.md)
+Further detail is given in [`docs/PHASES.md`](docs/PHASES.md).
 
-### Go Pipeline
+### Go
 
-Self-play generates positions by searching with MCTS. The network provides priors and a value estimate at each leaf. The resulting visit-count policy and game outcome become training targets. The loss is cross-entropy on the policy plus mean-squared error on the value.
+Self-play generates training data by searching from each position with MCTS. At every leaf the network is evaluated to obtain a policy prior and a scalar value. Selection uses the PUCT formula with Dirichlet noise injected at the root during self-play. After the game terminates, the visit-count distribution and the final outcome (from the mover’s perspective) become the policy and value targets. The training loss is the sum of cross-entropy on the policy and mean-squared error on the value, plus L2 regularization on the weights.
 
 ```mermaid
 graph TD
@@ -148,28 +160,26 @@ graph TD
     H --> A
 ```
 
-PUCT selection uses network priors and root Dirichlet noise. Value backups flip sign with the player to move.
+| Module | Path | Role |
+|:-------|:-----|:-----|
+| Rules | `matlab/+go/Board.m` | Area scoring, positional superko, suicide ban |
+| Features | `matlab/+az/features.m` | History planes (own/opponent stones) + color-to-move |
+| Network | `matlab/+az/netInit.m`, `netForward.m`, `netTrain.m` | Two-hidden-layer MLP, manual backprop |
+| Search | `matlab/+az/mcts.m` | PUCT, Dirichlet noise, sign-correct value backup |
+| Self-play | `matlab/+az/selfplay.m` | Trajectory collection |
+| C++ | `cpp/` | GoBoard, MCTS, self-play binary |
 
-| Module | Path |
-|:-------|:-----|
-| Rules | `matlab/+go/Board.m` |
-| Features | `matlab/+az/features.m` |
-| Network | `matlab/+az/net{Init,Forward,Train}.m` |
-| Search | `matlab/+az/mcts.m` |
-| Self-play | `matlab/+az/selfplay.m` |
-| C++ | `cpp/` |
-
-Network structure → [`docs/network_tree.xml`](docs/network_tree.xml)
+A structural description of an alternative Transformer policy-value network is provided in [`docs/network_tree.xml`](docs/network_tree.xml).
 
 ---
 
-## Project Structure
+## Repository Layout
 
 ```text
 src/                 Maritime simulation sources
-docs/                Design notes, phases, network diagram
+docs/                PHASES.md, network_tree.xml, architecture notes
 matlab/+go/          Go rules engine
-matlab/+az/          Features, MLP, MCTS, self-play, training
+matlab/+az/          Features, network, MCTS, self-play, training
 cpp/                 C++ GoBoard, MCTS, self-play
 ```
 
@@ -177,4 +187,4 @@ cpp/                 C++ GoBoard, MCTS, self-play
 
 ## License
 
-Licensed under the **GNU Affero General Public License v3.0 only**. See [LICENSE](LICENSE).
+This project is licensed under the GNU Affero General Public License v3.0 only. See [LICENSE](LICENSE).
