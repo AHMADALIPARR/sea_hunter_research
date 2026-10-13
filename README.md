@@ -106,14 +106,26 @@ data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
 ### Maritime Pipeline
 
 ```mermaid
-flowchart LR
-    state[Vessel State] --> guidance[Waypoint Guidance]
-    guidance --> gate{Safety Gate}
-    gate -->|Accept| update[Kinematic Update]
-    gate -->|Reject| hold[Hold]
-    update --> sensor[Sensor Observation]
-    sensor --> track[Kalman Track]
-    track --> cpa[CPA / TCPA]
+flowchart TB
+    subgraph Control
+        state[Vessel State]
+        guidance[Waypoint Guidance]
+        gate{Safety Gate}
+        update[Kinematic Update]
+        hold[Hold]
+    end
+    subgraph Perception
+        sensor[Sensor Observation]
+        track[Kalman Track]
+        cpa[CPA / TCPA]
+    end
+    state --> guidance
+    guidance --> gate
+    gate -->|Accept| update
+    gate -->|Reject| hold
+    update --> sensor
+    sensor --> track
+    track --> cpa
     update --> state
 ```
 
@@ -127,15 +139,27 @@ Details → [`docs/PHASES.md`](docs/PHASES.md)
 ### Go Pipeline
 
 ```mermaid
-flowchart LR
-    init[netInit] --> selfplay[selfplay]
-    selfplay --> mcts[MCTS]
-    mcts --> forward[features + forward]
-    mcts --> puct[PUCT]
-    puct --> apply[applyAction]
+flowchart TB
+    subgraph Training Loop
+        init[netInit]
+        selfplay[selfplay]
+        targets[visit policy + outcome]
+        train[netTrain]
+    end
+    subgraph Search
+        mcts[MCTS]
+        forward[features + netForward]
+        puct[PUCT selection]
+        apply[applyAction]
+    end
+    init --> selfplay
+    selfplay --> mcts
+    mcts --> forward
+    mcts --> puct
+    puct --> apply
     apply --> mcts
-    selfplay --> targets[policy + outcome]
-    targets --> train[netTrain]
+    selfplay --> targets
+    targets --> train
     train --> init
 ```
 
