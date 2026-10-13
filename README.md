@@ -93,28 +93,9 @@ The C++ self-play binary uses a uniform random evaluator. It exercises the rules
 
 The MATLAB implementation provides the complete training loop: history-based feature planes, a two-hidden-layer MLP, MCTS with network priors and root Dirichlet noise, self-play trajectory collection, and minibatch SGD with manually derived gradients.
 
-```matlab
-cfg.N          = 5;
-cfg.hist       = 4;
-cfg.sims       = 50;
-cfg.cpuct      = 1.5;
-cfg.komi       = 6.5;
-cfg.maxPlies   = 50;
-cfg.tauPlies   = 10;
-cfg.noise      = true;
-cfg.noiseAlpha = 0.03;
-cfg.noiseEps   = 0.25;
-cfg.seed       = 42;
-
-D = (2 * cfg.hist + 1) * cfg.N^2;
-A = cfg.N^2 + 1;
-H = 64;
-
-P    = az.netInit(D, A, H, cfg.seed);
-traj = az.selfplay(P, cfg, 1);
-data = struct('xs', traj.xs, 'pis', traj.pis, 'zs', traj.zs);
-[P, loss] = az.netTrain(P, data, 10, 0.01, 1e-4);
-```
+<p align="center">
+  <img src="docs/images/matlab_training.png" alt="MATLAB training pipeline" width="420"/>
+</p>
 
 ---
 
