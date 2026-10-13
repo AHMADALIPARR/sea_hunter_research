@@ -169,33 +169,38 @@ graph TD
 
 Further detail is given in [`docs/PHASES.md`](docs/PHASES.md).
 
-### Go
+### Go Engine
 
-Self-play generates training data by searching from each position with MCTS. At every leaf the network is evaluated to obtain a policy prior and a scalar value. Selection uses the PUCT formula with Dirichlet noise injected at the root during self-play. After the game terminates, the visit-count distribution and the final outcome (from the mover’s perspective) become the policy and value targets. The training loss is the sum of cross-entropy on the policy and mean-squared error on the value, plus L2 regularization on the weights.
+The Go engine implements an AlphaZero-style agent. Rules, search, and training are separated.
+
+**Rules.** Area (Tromp-Taylor) scoring, positional superko via board-hash history, suicide ban, and an optional post-pass dead-stone removal phase. Implemented in MATLAB (`+go/Board`) and C++ (`GoBoard`).
+
+**Search.** MCTS with PUCT selection. At each leaf the network returns a policy prior and a value. Root Dirichlet noise is mixed into the prior during self-play. Value backups alternate sign with the player to move. The final visit-count distribution is the policy target.
+
+**Training.** Self-play collects (features, visit policy, outcome) tuples. The network is a two-hidden-layer MLP. Training minimizes cross-entropy on the policy plus mean-squared error on the value, with L2 regularization. Gradients are derived manually.
 
 ```mermaid
 graph TD
-    A[netInit] --> B[selfplay]
-    B --> C[MCTS]
-    C --> D[features]
-    C --> E[PUCT]
-    E --> F[applyAction]
-    F --> C
-    B --> G[policy and outcome]
-    G --> H[netTrain]
-    H --> A
+    init[Initialize Network] --> play[Self-play Game]
+    play --> search[MCTS]
+    search --> eval[Network Evaluation]
+    search --> select[PUCT Selection]
+    select --> move[Apply Move]
+    move --> search
+    play --> data[Policy and Outcome Targets]
+    data --> train[Train Network]
+    train --> init
 ```
 
-| Module | Path | Role |
-|:-------|:-----|:-----|
-| Rules | `matlab/+go/Board.m` | Area scoring, positional superko, suicide ban |
-| Features | `matlab/+az/features.m` | History planes (own/opponent stones) + color-to-move |
-| Network | `matlab/+az/netInit.m`, `netForward.m`, `netTrain.m` | Two-hidden-layer MLP, manual backprop |
-| Search | `matlab/+az/mcts.m` | PUCT, Dirichlet noise, sign-correct value backup |
-| Self-play | `matlab/+az/selfplay.m` | Trajectory collection |
-| C++ | `cpp/` | GoBoard, MCTS, self-play binary |
+| Component | MATLAB | C++ |
+|:----------|:-------|:----|
+| Rules | `+go/Board.m` | `cpp/include/go_board.hpp` |
+| Features | `+az/features.m` | — |
+| Network | `+az/netInit.m`, `netForward.m`, `netTrain.m` | Random evaluator |
+| Search | `+az/mcts.m` | `cpp/src/mcts.cpp` |
+| Self-play | `+az/selfplay.m` | `cpp/src/selfplay_main.cpp` |
 
-A structural description of an alternative Transformer policy-value network is provided in [`docs/network_tree.xml`](docs/network_tree.xml).
+An alternative Transformer policy-value architecture is described in [`docs/network_tree.xml`](docs/network_tree.xml).
 
 ---
 
